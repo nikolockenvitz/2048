@@ -56,14 +56,6 @@ class UI:
         # create a game instance
         self.game = Game()
         
-        # see most colors at once (just for testing / design)
-        DESIGN_TEST = 1#False
-        if(DESIGN_TEST):
-            self.game.field = [[    4,     4,     8,    16],
-                               [   32,    64,   128,   256],
-                               [  512,  1024,  2048,  4096],
-                               [2**13, 2**14, 2**15, 2**17]]
-        
         self.root = Tk()
         self.root.config(bg=self.bg)
         self.root.title("2048")
