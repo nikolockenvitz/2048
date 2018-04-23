@@ -36,6 +36,7 @@ DEFAULT_DESIGN = [[ 0, "#000000", "#aa9898"], #       -
 from tkinter import *
 from random import randint
 from math import log2
+import os
 
 class UI:
     def __init__(self):
@@ -55,14 +56,6 @@ class UI:
         # create a game instance
         self.game = Game()
         
-        # see most colors at once (just for testing / design)
-        DESIGN_TEST = False
-        if(DESIGN_TEST):
-            self.game.field = [[    4,     4,     8,    16],
-                               [   32,    64,   128,   256],
-                               [  512,  1024,  2048,  4096],
-                               [2**13, 2**14, 2**15, 2**17]]
-        
         self.root = Tk()
         self.root.config(bg=self.bg)
         self.root.title("2048")
@@ -75,6 +68,7 @@ class UI:
         self.createUIElements()
         self.show()
 
+        #self.root.attributes("-alpha", 0.3)
         self.root.mainloop()
 
     def rootDestroy(self):
@@ -200,7 +194,8 @@ class UI:
 class Game:
     def __init__(self):
         self.probability4 = 10
-        
+
+        self.initFileName()
         self.initField()
         self.initValues()
 
@@ -208,6 +203,13 @@ class Game:
         self.score = 0 # max: 3932164
         self.round = 0
         self.readHighScore()
+
+    def initFileName(self):
+        # get directory in which the file is located
+        pathDir = os.path.dirname(os.path.abspath(__file__))
+
+        # append specified filename to directory of script
+        self.filename = pathDir + "\\" + FILENAME_HIGHSCORE
 
     def initField(self):
         self.field  = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
@@ -217,20 +219,22 @@ class Game:
 
     def readHighScore(self):
         try:
-            with open(FILENAME_HIGHSCORE, "r") as f:
+            with open(self.filename, "r") as f:
                 self.highscore = int(f.readlines()[0].strip())
-        except:
+        except Exception as e:
             print("Can't read highscore from file", FILENAME_HIGHSCORE)
+            print("***", e)
             self.highscore = 0
 
     def writeHighScore(self):
         self.highscore = max(self.highscore, self.score)
         try:
-            with open(FILENAME_HIGHSCORE, "w") as f:
+            with open(self.filename, "w") as f:
                 f.write(str(self.highscore))
-        except:
+        except Exception as e:
             print("Can't write highscore", self.highscore,
                   "into file", FILENAME_HIGHSCORE)
+            print("***", e)
 
     def move(self, direction):
         # direction has to be 0,1,2,3 (N,E,S,W)
