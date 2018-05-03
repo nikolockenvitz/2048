@@ -1,5 +1,7 @@
 #!/usr/bin/python3
 
+# TODO: set grid, get scale in __init__ (fonts), rename and explain resize2
+
 FILENAME_HIGHSCORE = "2048highscore.txt"
 
 KEYS_UP    = ["w", "Up"]
@@ -9,9 +11,9 @@ KEYS_LEFT  = ["a", "Left"]
 
 BG             = "#776e65"
 BG_END_OF_GAME = "#edc22e"
-FONT_FIELD     = ("Consolas", "18", "bold")
-FONT_TEXT      = ("Consolas", "16")
-FONT_2048      = ("Consolas", "64")
+FONT_FIELD     = ["Consolas", "18", "bold"]
+FONT_TEXT      = ["Consolas", "16"]
+FONT_2048      = ["Consolas", "64"]
 FG_2048        = "#50d1f5"
 
 DEFAULT_DESIGN = [[ 0, "#000000", "#aa9898"], #       -
@@ -59,17 +61,55 @@ class UI:
         self.root = Tk()
         self.root.config(bg=self.bg)
         self.root.title("2048")
-        self.root.geometry("740x500")
-        self.root.minsize(740,500)
-        self.root.maxsize(740,500)
+
+        self.unit   = 20
+        self.width  = 37*self.unit
+        self.height = 25*self.unit
+        self.setSize()
+        
         self.root.bind("<Key>", self.keyPressed)
         self.root.protocol("WM_DELETE_WINDOW", self.rootDestroy)
 
         self.createUIElements()
         self.show()
 
-        #self.root.attributes("-alpha", 0.3)
+        self.root.bind("<Enter>", self.resize)
+        self.root.bind("<Configure>", self.resize2)
         self.root.mainloop()
+
+    def resize2(self, event):
+        if((self.unit == self.root.winfo_screenheight()//25-2 or
+           self.unit == self.root.winfo_screenwidth()//37) and
+           self.root.state() == "normal"):
+            # maxsize to normal -> button in top right corner
+            width = 740
+            self.setSize(width)
+
+    def resize(self, event):
+        width = self.root.winfo_width()
+        self.setSize(width)
+
+    def setSize(self, width=740):                    
+        self.unit = min(max(5, width // 37),
+                        self.root.winfo_screenheight()//25-2,
+                        self.root.winfo_screenwidth()//37)
+        width  = 37*self.unit
+        height = 25*self.unit
+
+        if(self.unit == self.root.winfo_screenheight()//25-2 or
+           self.unit == self.root.winfo_screenwidth()//37):
+            # max value
+            self.root.state("zoomed")
+        else:
+            self.root.state("normal")
+        
+        size = str(width) + "x" + str(height)
+        self.root.geometry(size)
+        if(width != self.width or height != self.height):
+            self.width = width
+            self.height = height
+            self.hideUIElements()
+            self.showUIElements()
 
     def rootDestroy(self):
         self.game.writeHighScore()
@@ -94,27 +134,62 @@ class UI:
                      font = self.fontText,
                      fg   = "#ffffff")
 
+    def updateFontSize(self):
+        self.fontFields[1] = int(0.9*self.unit) # TODO get scale by define at top
+        self.fontText[1]   = int(0.8*self.unit)
+        self.font2048[1]   = int(3.2*self.unit)
+        
+        self.labelScore.config(font=self.fontText)
+        self.labelHighScore.config(font=self.fontText)
+        self.labelNewGame.config(font=self.fontText)
+        self.label2048.config(font=self.font2048)
+        for fields in self.field:
+            for field in fields:
+                field.config(font=self.fontFields)
+
+    def showUIElements(self):
+        listLabels = [self.labelScore,
+                      self.labelHighScore,
+                      self.label2048,
+                      self.labelNewGame]
+        for i in range(4):
+            listLabels[i].place(x =      26*self.unit,
+                                y = (6*i+1)*self.unit,
+                                width  =  9*self.unit,
+                                height =  5*self.unit)
+                
+        for y in range(4):
+            for x in range(4):
+                self.field[y][x].place(x= 6*self.unit*x+self.unit,
+                                       y= 6*self.unit*y+self.unit,
+                                       width  = 5*self.unit,
+                                       height = 5*self.unit)
+
+        self.updateFontSize()
+        self.show()
+
+    def hideUIElements(self):
+        self.labelScore.place_forget()
+        self.labelHighScore.place_forget()
+        self.label2048.place_forget()
+        self.labelNewGame.place_forget()
+
+        for fields in self.field:
+            for field in fields:
+                field.place_forget()
+
     def createUIElements(self):
         self.labelScore = self.labelText()
-        self.labelScore.place(x=520, y=20,
-                              width=180, height=100)
-
         self.labelHighScore = self.labelText()
-        self.labelHighScore.place(x=520, y=140,
-                                  width=180, height=100)
-
+        
         self.label2048 = Label(self.root,
                                text = "2048",
                                bg   = self.bg,
                                font = self.font2048,
                                fg   = self.fg2048)
-        self.label2048.place(x=520, y=260,
-                             width=180, height=100)
 
         self.labelNewGame = self.labelText("New Game")
         self.labelNewGame.config(relief=RIDGE)
-        self.labelNewGame.place(x=520, y=380,
-                                width=180, height=100)
         self.labelNewGame.bind("<Button-1>", self.newGame)
         
         self.field00 = self.labelField()
@@ -142,13 +217,7 @@ class UI:
                       [self.field20, self.field21, self.field22, self.field23],
                       [self.field30, self.field31, self.field32, self.field33]]#
         
-        for y in range(4):
-            for x in range(4):
-                self.field[y][x].place(x=120*x+20,
-                                       y=120*y+20,
-                                       width=100, height=100)
-
-        self.root.update()
+        self.showUIElements()
 
     def keyPressed(self, event):
         for direction in range(4):
@@ -156,7 +225,9 @@ class UI:
                 self.game.move(direction)
                 self.show()
                 return
-        
+
+        if(event.keysym=="plus"): self.setSize(self.width+37)
+        if(event.keysym=="minus"): self.setSize(self.width-37)
         # minimize window when any other key is pressed
         #self.root.iconify()
 
