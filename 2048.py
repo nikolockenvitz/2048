@@ -35,7 +35,14 @@ DEFAULT_DESIGN = [[ 0, "#000000", "#aa9898"], #       -
                   [16, "#ffffff", "#403635"], #  65.536
                   [17, "#ffffff", "#201818"]] # 131.072
 
+DEFAULT_WIDTH_WINDOW = 740
+
+GRID_COLUMNS = 37
+GRID_ROWS    = 25
+GRID_UNIT    = 20
+
 from tkinter import *
+from tkinter import messagebox
 from random import randint
 from math import log2
 import os
@@ -46,59 +53,79 @@ class UI:
         self.keys = [KEYS_UP, KEYS_RIGHT,
                      KEYS_DOWN, KEYS_LEFT]
 
-        # colors: [ [exponent, fg, bg], ... ]
-        self.colours    = DEFAULT_DESIGN
-        self.bg         = BG
-        self.bg_eog     = BG_END_OF_GAME
-        self.fontFields = FONT_FIELD
-        self.fontText   = FONT_TEXT
-        self.font2048   = FONT_2048
-        self.fg2048     = FG_2048
+        # set colours for tiles: [ [exponent, fg, bg], ... ]
+        self.colours     = DEFAULT_DESIGN
+
+        # colours and fonts
+        self.bg          = BG
+        self.bgEndOfGame = BG_END_OF_GAME
+        self.fontFields  = FONT_FIELD
+        self.fontText    = FONT_TEXT
+        self.font2048    = FONT_2048
+        self.fg2048      = FG_2048
 
         # create a game instance
         self.game = Game()
-        
+
+        # create window
         self.root = Tk()
         self.root.config(bg=self.bg)
         self.root.title("2048")
 
-        self.unit   = 20
-        self.width  = 37*self.unit
-        self.height = 25*self.unit
-        self.setSize()
-        
-        self.root.bind("<Key>", self.keyPressed)
-        self.root.protocol("WM_DELETE_WINDOW", self.rootDestroy)
+        # init grid
+        self.unit   = GRID_UNIT
+        self.width  = GRID_COLUMNS * self.unit
+        self.height = GRID_ROWS    * self.unit
 
+        # get coefficient for fonts (dependency between font size and grid unit)
+        self.coefficientFontFields = int(self.fontFields[1]) / self.unit
+        self.coefficientFontText   = int(self.fontText[1])   / self.unit
+        self.coefficientFont2048   = int(self.font2048[1])   / self.unit
+
+        # initialize window
+        self.setWindowSize()
         self.createUIElements()
         self.show()
 
-        self.root.bind("<Enter>", self.resize)
-        self.root.bind("<Configure>", self.resize2)
+        # bindings
+        self.root.bind("<Enter>",     self.adjustWindowToCurrentWidth)
+        self.root.bind("<Configure>", self.adjustWindowToCurrentState)
+        self.root.bind("<Key>",       self.keyPressed)
+
+        # call function to close gracefully
+        self.root.protocol("WM_DELETE_WINDOW", self.rootDestroy)
+
         self.root.mainloop()
 
-    def resize2(self, event):
-        if((self.unit == self.root.winfo_screenheight()//25-2 or
-           self.unit == self.root.winfo_screenwidth()//37) and
+    def adjustWindowToCurrentState(self, event=None):
+        # zoomed to normal
+        if((self.unit == self.root.winfo_screenheight()//GRID_ROWS-2 or
+            self.unit == self.root.winfo_screenwidth()//GRID_COLUMNS) and
            self.root.state() == "normal"):
-            # maxsize to normal -> button in top right corner
-            width = 740
-            self.setSize(width)
+            width = DEFAULT_WIDTH_WINDOW
+            self.setWindowSize(width)
+        # normal to zoomed
+        if(not (self.unit == self.root.winfo_screenheight()//GRID_ROWS-2 or
+                self.unit == self.root.winfo_screenwidth()//GRID_COLUMNS) and
+           self.root.state() == "zoomed"):
+            width = self.root.winfo_screenwidth()
+            self.setWindowSize(width)
 
-    def resize(self, event):
+    def adjustWindowToCurrentWidth(self, event=None):
+        # adjusts content and window size
         width = self.root.winfo_width()
-        self.setSize(width)
+        self.setWindowSize(width)
 
-    def setSize(self, width=740):                    
-        self.unit = min(max(5, width // 37),
-                        self.root.winfo_screenheight()//25-2,
-                        self.root.winfo_screenwidth()//37)
-        width  = 37*self.unit
-        height = 25*self.unit
+    def setWindowSize(self, width=DEFAULT_WIDTH_WINDOW):
+        self.unit = min(max(5, width // GRID_COLUMNS),
+                        self.root.winfo_screenheight()//GRID_ROWS-2,
+                        self.root.winfo_screenwidth()//GRID_COLUMNS)
+        width  = GRID_COLUMNS * self.unit
+        height = GRID_ROWS    * self.unit
 
-        if(self.unit == self.root.winfo_screenheight()//25-2 or
-           self.unit == self.root.winfo_screenwidth()//37):
-            # max value
+        if(self.unit == self.root.winfo_screenheight()//GRID_ROWS-2 or
+           self.unit == self.root.winfo_screenwidth()//GRID_COLUMNS):
+            # max value -> full screen / zoomed
             self.root.state("zoomed")
         else:
             self.root.state("normal")
@@ -106,20 +133,32 @@ class UI:
         size = str(width) + "x" + str(height)
         self.root.geometry(size)
         if(width != self.width or height != self.height):
-            self.width = width
+            self.width  = width
             self.height = height
             self.hideUIElements()
             self.showUIElements()
 
-    def rootDestroy(self):
-        self.game.writeHighScore()
-        self.root.destroy()
+    def confirmAction(self, msgboxHeading, msgboxText):
+        if(not self.game.isFinished()):
+            # game is not finished yet
+            answer = messagebox.askyesno(msgboxHeading,
+                                         msgboxText)
+            return answer
 
-    def newGame(self, event):
-        if(not self.game.isFinished()): return
-        self.game.writeHighScore()
-        self.game = Game()
-        self.show()
+        # return True per default when game is finished
+        return True
+
+    def rootDestroy(self):
+        if(self.confirmAction("Quit?","Do you really want to quit?")):
+            self.game.writeHighScore()
+            self.root.destroy()
+
+    def newGame(self, event=None):
+        if(self.confirmAction("New Game?",
+                              "Do you really want to start a new game?")):
+            self.game.writeHighScore()
+            self.game = Game()
+            self.show()
 
     def labelField(self):
         return Label(self.root,
@@ -135,28 +174,25 @@ class UI:
                      fg   = "#ffffff")
 
     def updateFontSize(self):
-        self.fontFields[1] = int(0.9*self.unit) # TODO get scale by define at top
-        self.fontText[1]   = int(0.8*self.unit)
-        self.font2048[1]   = int(3.2*self.unit)
+        self.fontFields[1] = int(self.coefficientFontFields * self.unit)
+        self.fontText[1]   = int(self.coefficientFontText   * self.unit)
+        self.font2048[1]   = int(self.coefficientFont2048   * self.unit)
         
-        self.labelScore.config(font=self.fontText)
-        self.labelHighScore.config(font=self.fontText)
-        self.labelNewGame.config(font=self.fontText)
+        for label in self.listLabels:
+            label.config(font=self.fontText)
+
         self.label2048.config(font=self.font2048)
+        
         for fields in self.field:
             for field in fields:
                 field.config(font=self.fontFields)
 
     def showUIElements(self):
-        listLabels = [self.labelScore,
-                      self.labelHighScore,
-                      self.label2048,
-                      self.labelNewGame]
         for i in range(4):
-            listLabels[i].place(x =      26*self.unit,
-                                y = (6*i+1)*self.unit,
-                                width  =  9*self.unit,
-                                height =  5*self.unit)
+            self.listLabels[i].place(x =      26*self.unit,
+                                     y = (6*i+1)*self.unit,
+                                     width  =  9*self.unit,
+                                     height =  5*self.unit)
                 
         for y in range(4):
             for x in range(4):
@@ -169,10 +205,8 @@ class UI:
         self.show()
 
     def hideUIElements(self):
-        self.labelScore.place_forget()
-        self.labelHighScore.place_forget()
-        self.label2048.place_forget()
-        self.labelNewGame.place_forget()
+        for label in self.listLabels:
+            label.place_forget()
 
         for fields in self.field:
             for field in fields:
@@ -191,6 +225,11 @@ class UI:
         self.labelNewGame = self.labelText("New Game")
         self.labelNewGame.config(relief=RIDGE)
         self.labelNewGame.bind("<Button-1>", self.newGame)
+
+        self.listLabels = [self.labelScore,
+                           self.labelHighScore,
+                           self.label2048,
+                           self.labelNewGame]
         
         self.field00 = self.labelField()
         self.field01 = self.labelField()
@@ -226,8 +265,9 @@ class UI:
                 self.show()
                 return
 
-        if(event.keysym=="plus"): self.setSize(self.width+37)
-        if(event.keysym=="minus"): self.setSize(self.width-37)
+        if(event.keysym=="plus"): self.setWindowSize(self.width+GRID_COLUMNS)
+        if(event.keysym=="minus"): self.setWindowSize(self.width-GRID_COLUMNS)
+        
         # minimize window when any other key is pressed
         #self.root.iconify()
 
@@ -252,13 +292,11 @@ class UI:
         self.labelHighScore["text"] = "Highscore:\n" + str(self.game.highscore)
 
         if(self.game.isFinished()):
-            for element in [self.root, self.labelScore, self.labelHighScore,
-                            self.label2048, self.labelNewGame]:
-                element.config(bg=self.bg_eog)
+            for element in [self.root] + self.listLabels:
+                element.config(bg = self.bgEndOfGame)
         else:
-            for element in [self.root, self.labelScore, self.labelHighScore,
-                            self.label2048, self.labelNewGame]:
-                element.config(bg=self.bg)
+            for element in [self.root] + self.listLabels:
+                element.config(bg = self.bg)
 
         self.root.update()
 
