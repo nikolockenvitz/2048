@@ -91,11 +91,25 @@ class UI:
         self.root.bind("<Enter>",     self.adjustWindowToCurrentWidth)
         self.root.bind("<Configure>", self.adjustWindowToCurrentState)
         self.root.bind("<Key>",       self.keyPressed)
+        self.root.bind("<F11>", self.toggle_fullscreen)
+        self.root.bind("<Escape>", self.end_fullscreen)
+        self.root.bind("<0>", self.newGame)
+        self.state = False
 
         # call function to close gracefully
         self.root.protocol("WM_DELETE_WINDOW", self.rootDestroy)
 
         self.root.mainloop()
+
+    def toggle_fullscreen(self, event=None):
+        self.state = not self.state  # Just toggling the boolean
+        self.root.attributes("-fullscreen", self.state)
+
+    def end_fullscreen(self, event=None):
+        self.state = False
+        self.root.attributes("-fullscreen", False)
+
+
 
     def adjustWindowToCurrentState(self, event=None):
         # zoomed to normal
@@ -129,7 +143,7 @@ class UI:
             self.root.state("zoomed")
         else:
             self.root.state("normal")
-        
+
         size = str(width) + "x" + str(height)
         self.root.geometry(size)
         if(width != self.width or height != self.height):
@@ -177,12 +191,12 @@ class UI:
         self.fontFields[1] = int(self.coefficientFontFields * self.unit)
         self.fontText[1]   = int(self.coefficientFontText   * self.unit)
         self.font2048[1]   = int(self.coefficientFont2048   * self.unit)
-        
+
         for label in self.listLabels:
             label.config(font=self.fontText)
 
         self.label2048.config(font=self.font2048)
-        
+
         for fields in self.field:
             for field in fields:
                 field.config(font=self.fontFields)
@@ -193,7 +207,7 @@ class UI:
                                      y = (6*i+1)*self.unit,
                                      width  =  9*self.unit,
                                      height =  5*self.unit)
-                
+
         for y in range(4):
             for x in range(4):
                 self.field[y][x].place(x= 6*self.unit*x+self.unit,
@@ -215,7 +229,7 @@ class UI:
     def createUIElements(self):
         self.labelScore = self.labelText()
         self.labelHighScore = self.labelText()
-        
+
         self.label2048 = Label(self.root,
                                text = "2048",
                                bg   = self.bg,
@@ -230,12 +244,12 @@ class UI:
                            self.labelHighScore,
                            self.label2048,
                            self.labelNewGame]
-        
+
         self.field00 = self.labelField()
         self.field01 = self.labelField()
         self.field02 = self.labelField()
         self.field03 = self.labelField()
-        
+
         self.field10 = self.labelField()
         self.field11 = self.labelField()
         self.field12 = self.labelField()
@@ -255,7 +269,7 @@ class UI:
                       [self.field10, self.field11, self.field12, self.field13],
                       [self.field20, self.field21, self.field22, self.field23],
                       [self.field30, self.field31, self.field32, self.field33]]#
-        
+
         self.showUIElements()
 
     def keyPressed(self, event):
@@ -267,7 +281,7 @@ class UI:
 
         if(event.keysym=="plus"): self.setWindowSize(self.width+GRID_COLUMNS)
         if(event.keysym=="minus"): self.setWindowSize(self.width-GRID_COLUMNS)
-        
+
         # minimize window when any other key is pressed
         #self.root.iconify()
 
@@ -352,7 +366,7 @@ class Game:
                self.__move_east,
                self.__move_south,
                self.__move_west][direction]()
-        
+
         if(self.field != new):
             self.field = new
             self.insertRandomNumber()
@@ -360,7 +374,7 @@ class Game:
             self.highscore = max(self.score, self.highscore)
             return True
         return False
-    
+
     def __move_north(self):
         new = [[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]]
         for x in range(0,4):
