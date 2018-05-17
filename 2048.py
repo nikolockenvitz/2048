@@ -76,8 +76,8 @@ class UI:
 
         # init grid
         self.unit   = GRID_UNIT
-        self.width  = GRID_COLUMNS * self.unit
-        self.height = GRID_ROWS    * self.unit
+        self.width = 0
+        self.height = 0
 
         # get coefficient for fonts (dependency between font size and grid unit)
         self.coefficientFontFields = int(self.fontFields[1]) / self.unit
@@ -85,8 +85,8 @@ class UI:
         self.coefficientFont2048   = int(self.font2048[1])   / self.unit
 
         # initialize window
-        self.setWindowSize()
         self.createUIElements()
+        self.setWindowSize()
         self.show()
 
         # bindings
@@ -155,9 +155,9 @@ class UI:
             self.root.state("normal")
 
         # update window (also UI-elements if changed)
-        size = str(width) + "x" + str(height)
-        self.root.geometry(size)
         if(width != self.width or height != self.height):
+            size = str(width) + "x" + str(height)
+            self.root.geometry(size)
             self.width  = width
             self.height = height
             self.hideUIElements()
