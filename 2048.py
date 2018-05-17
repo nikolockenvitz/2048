@@ -2,10 +2,18 @@
 
 FILENAME_HIGHSCORE = "2048highscore.txt"
 
-KEYS_UP    = ["w", "Up"]
-KEYS_RIGHT = ["d", "Right"]
-KEYS_DOWN  = ["s", "Down"]
-KEYS_LEFT  = ["a", "Left"]
+KEYS_UP    = ["Up"]    # w
+KEYS_RIGHT = ["Right"] # d
+KEYS_DOWN  = ["Down"]  # s
+KEYS_LEFT  = ["Left"]  # a
+
+KEYS_QUIT_GAME        = "q" # "<Control-q>"
+KEYS_NEW_GAME         = "n" # "<Control-n>"
+KEYS_OPEN_GAME        = "o" # "<Control-o>"
+KEYS_ZOOM_IN          = "+" # "<Control-plus>"
+KEYS_ZOOM_OUT         = "-" # "<Control-minus>"
+KEYS_ENTER_FULLSCREEN = "<F11>"
+KEYS_EXIT_FULLSCREEN  = "<Escape>"
 
 BG             = "#776e65"
 BG_END_OF_GAME = "#edc22e"
@@ -94,6 +102,15 @@ class UI:
         self.root.bind("<Configure>", self.adjustWindowToCurrentState)
         self.root.bind("<Key>",       self.keyPressed)
 
+        # keyboard shortcuts
+        self.root.bind(KEYS_QUIT_GAME,        self.rootDestroy)
+        self.root.bind(KEYS_NEW_GAME,         self.newGame)
+        self.root.bind(KEYS_OPEN_GAME,        self.openGame)
+        self.root.bind(KEYS_ZOOM_IN,          self.zoomIn)
+        self.root.bind(KEYS_ZOOM_OUT,         self.zoomOut)
+        self.root.bind(KEYS_ENTER_FULLSCREEN, self.enterFullscreen)
+        self.root.bind(KEYS_EXIT_FULLSCREEN,  self.exitFullscreen)
+
         # call function to close gracefully
         self.root.protocol("WM_DELETE_WINDOW", self.rootDestroy)
 
@@ -162,41 +179,6 @@ class UI:
             self.height = height
             self.hideUIElements()
             self.showUIElements()
-
-    def confirmAction(self, msgboxHeading, msgboxText):
-        """
-        Critical actions need to be confirmed. This functions creates a
-        message box to ask the user whether he is sure to continue.
-        This will only happen if game is not finished, otherwise the action
-        can continue (because a finished game is not supposed to be critical).
-        """
-        if(not self.game.isFinished()):
-            # game is not finished yet
-            answer = messagebox.askyesno(msgboxHeading,
-                                         msgboxText)
-            return answer
-
-        # return True per default when game is finished
-        return True
-
-    def rootDestroy(self):
-        """
-        This functions closes the window gracefully when confirmed again.
-        """
-        if(self.confirmAction("Quit?","Do you really want to quit?")):
-            self.game.writeHighScore()
-            self.root.destroy()
-
-    def newGame(self, event=None):
-        """
-        After confirming this action, old game will be saved and a new game
-        will be created. Afterwards UI has to be updated.
-        """
-        if(self.confirmAction("New Game?",
-                              "Do you really want to start a new game?")):
-            self.game.writeHighScore()
-            self.game.newGame()
-            self.show()
 
     def labelField(self):
         """
@@ -313,9 +295,71 @@ class UI:
         self.field = [[self.field00, self.field01, self.field02, self.field03],
                       [self.field10, self.field11, self.field12, self.field13],
                       [self.field20, self.field21, self.field22, self.field23],
-                      [self.field30, self.field31, self.field32, self.field33]]#
+                      [self.field30, self.field31, self.field32, self.field33]]
         
         self.showUIElements()
+
+    def confirmAction(self, msgboxHeading, msgboxText):
+        """
+        Critical actions need to be confirmed. This functions creates a
+        message box to ask the user whether he is sure to continue.
+        This will only happen if game is not finished, otherwise the action
+        can continue (because a finished game is not supposed to be critical).
+        """
+        if(not self.game.isFinished()):
+            # game is not finished yet
+            answer = messagebox.askyesno(msgboxHeading,
+                                         msgboxText)
+            return answer
+
+        # return True per default when game is finished
+        return True
+
+    def rootDestroy(self, event=None):
+        """
+        This functions closes the window gracefully when confirmed again.
+        """
+        if(self.confirmAction("Quit?","Do you really want to quit?")):
+            self.game.writeHighScore()
+            self.root.destroy()
+
+    def newGame(self, event=None):
+        """
+        After confirming this action, old game will be saved and a new game
+        will be created. Afterwards UI has to be updated.
+        """
+        if(self.confirmAction("New Game?",
+                              "Do you really want to start a new game?")):
+            self.game.writeHighScore()
+            self.game.newGame()
+            self.show()
+
+    def openGame(self, event=None):
+        return
+
+    def zoomIn(self, event=None):
+        """
+        This function will increment grid unit to make content larger.
+        """
+        self.setWindowSize(self.width + GRID_COLUMNS)
+
+    def zoomOut(self, event=None):
+        """
+        This function will decrement grid unit to make content smaller.
+        """
+        self.setWindowSize(self.width - GRID_COLUMNS)
+
+    def enterFullscreen(self, event=None):
+        """
+        This function will switch to fullscreen mode
+        """
+        self.root.state("zoomed")
+
+    def exitFullscreen(self, event=None):
+        """
+        This function will switch back to normal mode (default size)
+        """
+        self.root.state("normal")
 
     def keyPressed(self, event):
         """
@@ -328,12 +372,6 @@ class UI:
                 self.game.move(direction)
                 self.show()
                 return
-
-        if(event.keysym=="plus"): self.setWindowSize(self.width+GRID_COLUMNS)
-        if(event.keysym=="minus"): self.setWindowSize(self.width-GRID_COLUMNS)
-        
-        # minimize window when any other key is pressed
-        #self.root.iconify()
 
     def getColours(self, number):
         """
