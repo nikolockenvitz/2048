@@ -420,7 +420,7 @@ class Game:
         pathDir = os.path.dirname(os.path.abspath(__file__))
 
         # append specified filename to directory of script
-        self.filename = pathDir + "\\" + FILENAME_HIGHSCORE
+        self.filename = os.path.join(pathDir, FILENAME_HIGHSCORE)
 
     def initField(self):
         """
@@ -440,8 +440,7 @@ class Game:
             with open(self.filename, "r") as f:
                 self.highscore = int(f.readlines()[0].strip())
         except Exception as e:
-            print("Can't read highscore from file", FILENAME_HIGHSCORE)
-            print("***", e)
+            print("Highscore file not found. A new one will be created.", FILENAME_HIGHSCORE)
             self.highscore = 0
 
     def writeHighScore(self):
