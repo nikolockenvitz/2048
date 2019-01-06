@@ -5,3 +5,5 @@ This is a little version of popular game 2048 - optimized for Windows. Used prog
 You may need to install it: https://www.python.org/downloads/
 
 Graphical user interface is implemented with tkinter-package.
+
+![2048 Screenshot](images/2048-screenshot.png)
